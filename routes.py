@@ -1,6 +1,7 @@
-from config import app, db
-from models import Cita, Usuario
+from config import app, db, mail
+from models import Cita, Usuario, Notificacion
 from datetime import datetime
+from flask_mail import Message
 
 #-----Crear base de datos-----
 @app.cli.command("create_db")
@@ -81,7 +82,12 @@ def crear_cita():
         cita =  Cita(titulo=titulo, fecha=fecha, descripcion=descripcion, usuario_id=id_usuario)
         db.session.add(cita)
         db.session.commit()
-        print("Cita creada exitosamente")
+
+        mensaje = f"Recordatorio: \nTitulo: {cita.titulo} \nFecha: {cita.fecha}"
+        notificacion = Notificacion(usuario_id = id_usuario, cita_id = cita.id, mensaje = mensaje)
+        db.session.add(notificacion)
+        db.session.commit()
+        print("Cita creada exitosamente con su respectivo recordatorio")
     else:
         print("El usuario ingresado no esta registrado en el sistema")
 
@@ -152,3 +158,22 @@ def restaurar_cita():
         print("Cita restaurada exitosamente")
     else:
         print("No se encontaron registros")
+
+#-----Logica de notificaciones-----
+
+@app.cli.command("enviar_notificacion")
+def enviar_notificacion():
+    fecha_actual = datetime.now()
+    notificaciones = Notificacion.query.filter(Notificacion.fecha_envio <= fecha_actual, Notificacion.estado_envio == False)
+    for notificacion in notificaciones:
+        usuario = Usuario.query.get(notificacion.usuario_id)
+        cita = Cita.query.get(notificacion.cita_id)
+
+        msg = Message("Recordatorio de cita", sender="jr.camacho296@gmail.com", recipients=[usuario.correo])
+        msg.body = notificacion.mensaje
+        mail.send(msg)
+
+        notificacion.estado_envio = True
+        db.session.commit()
+        print(f"Notificacion enviada al usuario {usuario.nombre} con correo {usuario.correo} para la cita {cita.titulo}")
+    print("Notificaciones enviadas satisfactoriamente")

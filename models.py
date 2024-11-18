@@ -1,4 +1,5 @@
 from config import db
+from datetime import datetime
 
 class Usuario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -18,5 +19,12 @@ class Cita(db.Model):
     estado = db.Column(db.Boolean, default=True)
     usuario_id = db.Column(db.Integer, db.ForeignKey("usuario.id"), nullable=False)
 
-    def __repr__(self):
-        return f"ID: {self.id}, Titulo: {self.titulo}, Descripcion: {self.descripcion}, Fecha: {self.fecha}"
+class Notificacion(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    mensaje = db.Column(db.String(255), nullable=False)
+    estado_envio = db.Column(db.Boolean, default=False)
+    fecha_envio = db.Column(db.DateTime, default=datetime.now())
+    usuario_id = db.Column(db.Integer, db.ForeignKey("usuario.id"), nullable=False)
+    cita_id = db.Column(db.Integer, db.ForeignKey("cita.id"), nullable=False)
+    usuario = db.relationship("Usuario", backref="notificaciones")
+    cita = db.relationship("Cita", backref="notificaciones")
